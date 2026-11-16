@@ -1,0 +1,762 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="theme-color" content="#0f5132">
+<title>المحجز البلدي للدراجات والمركبات</title>
+<style>
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  :root {
+    --green: #0f5132; --green-2: #157347; --gold: #c9a227;
+    --bg: #f4f6f8; --card: #ffffff; --text: #1f2937; --muted: #6b7280;
+    --danger: #b91c1c; --warn: #b45309; --ok: #047857; --border: #e5e7eb;
+  }
+  body {
+    margin: 0; font-family: -apple-system, "Segoe UI", Tahoma, sans-serif;
+    background: var(--bg); color: var(--text); padding-bottom: 80px;
+    font-size: 15px; line-height: 1.5;
+  }
+  header {
+    background: linear-gradient(135deg, var(--green), var(--green-2));
+    color: #fff; padding: 14px 16px; position: sticky; top: 0; z-index: 10;
+    box-shadow: 0 2px 8px rgba(0,0,0,.15);
+  }
+  header h1 { margin: 0; font-size: 16px; font-weight: 700; }
+  header p { margin: 2px 0 0; font-size: 12px; opacity: .85; }
+  .container { padding: 12px; max-width: 720px; margin: 0 auto; }
+  .card {
+    background: var(--card); border-radius: 14px; padding: 14px;
+    margin-bottom: 12px; box-shadow: 0 1px 4px rgba(0,0,0,.06);
+    border: 1px solid var(--border);
+  }
+  .card h3 { margin: 0 0 8px; font-size: 15px; color: var(--green); }
+  .row { display: flex; justify-content: space-between; align-items: center; gap: 8px; padding: 4px 0; }
+  .row .k { color: var(--muted); font-size: 13px; }
+  .row .v { font-weight: 600; text-align: left; direction: ltr; font-size: 13px; }
+  .badge {
+    display: inline-block; padding: 3px 9px; border-radius: 999px;
+    font-size: 11px; font-weight: 700;
+  }
+  .badge.impounded { background: #fef3c7; color: var(--warn); }
+  .badge.released { background: #d1fae5; color: var(--ok); }
+  .badge.auction_pending { background: #fee2e2; color: var(--danger); }
+  .badge.auctioned { background: #e0e7ff; color: #3730a3; }
+  .badge.destroyed { background: #e5e7eb; color: #374151; }
+  .toolbar { display: flex; gap: 8px; margin-bottom: 12px; flex-wrap: wrap; }
+  .btn {
+    flex: 1; min-width: 120px; padding: 12px; border: none; border-radius: 10px;
+    background: var(--green); color: #fff; font-weight: 700; font-size: 14px;
+    cursor: pointer; transition: transform .05s;
+  }
+  .btn:active { transform: scale(.97); }
+  .btn.secondary { background: #fff; color: var(--green); border: 1.5px solid var(--green); }
+  .btn.danger { background: var(--danger); }
+  input, select, textarea {
+    width: 100%; padding: 11px; border: 1.5px solid var(--border);
+    border-radius: 9px; font-size: 14px; font-family: inherit;
+    background: #fff; color: var(--text);
+  }
+  input:focus, select:focus, textarea:focus {
+    outline: none; border-color: var(--green);
+  }
+  label { display: block; font-size: 12px; font-weight: 700; color: var(--muted); margin: 8px 0 4px; }
+  .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .empty { text-align: center; padding: 40px 16px; color: var(--muted); }
+  nav.bottom {
+    position: fixed; bottom: 0; left: 0; right: 0; background: #fff;
+    display: flex; border-top: 1px solid var(--border); z-index: 20;
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+  nav.bottom button {
+    flex: 1; padding: 10px 4px; border: none; background: none;
+    font-size: 11px; font-weight: 700; color: var(--muted); cursor: pointer;
+    display: flex; flex-direction: column; align-items: center; gap: 3px;
+  }
+  nav.bottom button.active { color: var(--green); }
+  nav.bottom button svg { width: 20px; height: 20px; }
+  .toast {
+    position: fixed; bottom: 90px; left: 50%; transform: translateX(-50%);
+    background: #111; color: #fff; padding: 10px 18px; border-radius: 999px;
+    font-size: 13px; opacity: 0; transition: opacity .3s; pointer-events: none;
+    z-index: 100; white-space: nowrap; max-width: 90vw;
+  }
+  .toast.show { opacity: 1; }
+  .hidden { display: none !important; }
+  .stat-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; }
+  .stat {
+    background: var(--card); border-radius: 12px; padding: 14px;
+    text-align: center; border: 1px solid var(--border);
+  }
+  .stat .num { font-size: 26px; font-weight: 800; color: var(--green); }
+  .stat .lbl { font-size: 12px; color: var(--muted); margin-top: 2px; }
+  .search-box { position: relative; margin-bottom: 12px; }
+  .search-box input { padding-right: 40px; }
+  .search-box::before {
+    content: "🔍"; position: absolute; right: 12px; top: 50%;
+    transform: translateY(-50%); font-size: 16px; opacity: .5;
+  }
+  .record-card { cursor: pointer; transition: transform .1s; }
+  .record-card:active { transform: scale(.99); }
+  .record-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; }
+  .record-title { font-weight: 800; font-size: 15px; color: var(--green); }
+  .record-sub { font-size: 12px; color: var(--muted); direction: ltr; text-align: right; }
+  .divider { height: 1px; background: var(--border); margin: 10px 0; }
+  .history-item { padding: 8px 0; border-bottom: 1px dashed var(--border); font-size: 13px; }
+  .history-item:last-child { border: none; }
+  .history-item .time { font-size: 11px; color: var(--muted); direction: ltr; text-align: right; }
+  .modal-bg {
+    position: fixed; inset: 0; background: rgba(0,0,0,.5); z-index: 50;
+    display: flex; align-items: flex-end; justify-content: center;
+  }
+  .modal {
+    background: #fff; width: 100%; max-width: 720px; max-height: 90vh;
+    border-radius: 18px 18px 0 0; overflow-y: auto; padding: 18px;
+    animation: slideUp .25s ease-out;
+  }
+  @keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
+  .modal h2 { margin: 0 0 12px; color: var(--green); font-size: 17px; }
+  .lock-screen {
+    position: fixed; inset: 0; background: linear-gradient(135deg, var(--green), #052e1c);
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    z-index: 1000; color: #fff; padding: 20px;
+  }
+  .lock-screen h1 { font-size: 20px; margin: 0 0 6px; }
+  .lock-screen p { font-size: 13px; opacity: .8; margin: 0 0 24px; }
+  .pin-display { display: flex; gap: 12px; margin-bottom: 24px; }
+  .pin-dot {
+    width: 16px; height: 16px; border-radius: 50%; background: rgba(255,255,255,.3);
+    transition: background .15s;
+  }
+  .pin-dot.filled { background: var(--gold); }
+  .pin-pad {
+    display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px;
+    width: 100%; max-width: 280px;
+  }
+  .pin-pad button {
+    aspect-ratio: 1; border: none; border-radius: 50%;
+    background: rgba(255,255,255,.15); color: #fff;
+    font-size: 22px; font-weight: 700; cursor: pointer;
+  }
+  .pin-pad button:active { background: rgba(255,255,255,.3); }
+  .pin-pad button.clear { background: rgba(185,28,28,.5); }
+  .lock-err { color: #fca5a5; font-size: 13px; margin-top: 12px; min-height: 18px; }
+</style>
+</head>
+<body>
+
+<div id="lockScreen" class="lock-screen">
+  <h1>🔒 المحجز البلدي</h1>
+  <p>أدخل رمز الدخول للمتابعة</p>
+  <div class="pin-display" id="pinDisplay">
+    <div class="pin-dot"></div><div class="pin-dot"></div>
+    <div class="pin-dot"></div><div class="pin-dot"></div>
+  </div>
+  <div class="pin-pad" id="pinPad">
+    <button data-k="1">1</button><button data-k="2">2</button><button data-k="3">3</button>
+    <button data-k="4">4</button><button data-k="5">5</button><button data-k="6">6</button>
+    <button data-k="7">7</button><button data-k="8">8</button><button data-k="9">9</button>
+    <button class="clear" data-k="C">⌫</button>
+    <button data-k="0">0</button>
+    <button data-k="OK">✓</button>
+  </div>
+  <div class="lock-err" id="lockErr"></div>
+</div>
+
+<div id="app" class="hidden">
+  <header>
+    <h1 id="appTitle">المحجز البلدي للدراجات والمركبات</h1>
+    <p id="appSub">لوحة التحكم — إدارة المحجوزات</p>
+  </header>
+
+  <div class="container">
+    <div id="page-home">
+      <div class="stat-grid" style="margin-bottom:12px;">
+        <div class="stat"><div class="num" id="stImpounded">0</div><div class="lbl">محجوزة</div></div>
+        <div class="stat"><div class="num" id="stAuction">0</div><div class="lbl">للمزاد</div></div>
+        <div class="stat"><div class="num" id="stReleased">0</div><div class="lbl">مسلَّمة</div></div>
+        <div class="stat"><div class="num" id="stTotal">0</div><div class="lbl">الإجمالي</div></div>
+      </div>
+      <div class="card">
+        <h3>⚡ إجراءات سريعة</h3>
+        <div class="toolbar" style="margin-top:8px;">
+          <button class="btn" onclick="openAddForm()">+ إضافة حجز</button>
+          <button class="btn secondary" onclick="exportBackup()">⬇ تصدير</button>
+        </div>
+        <div class="toolbar">
+          <button class="btn secondary" onclick="document.getElementById('importFile').click()">⬆ استيراد</button>
+          <button class="btn secondary" onclick="runAuctionCheck()">⚖ فحص المزاد</button>
+        </div>
+        <input type="file" id="importFile" accept=".json" class="hidden" onchange="importBackup(event)">
+      </div>
+      <div class="card">
+        <h3>📋 آخر السجلات</h3>
+        <div id="recentList"></div>
+      </div>
+    </div>
+
+    <div id="page-records" class="hidden">
+      <div class="search-box">
+        <input type="text" id="searchInput" placeholder="ابحث بالرقم، الاسم، الصفيحة..." oninput="renderRecords()">
+      </div>
+      <div id="recordsList"></div>
+    </div>
+
+    <div id="page-settings" class="hidden">
+      <div class="card">
+        <h3>⚙ الإعدادات</h3>
+        <label>اسم الجماعة</label><input id="setMunicipality" />
+        <label>اسم المحجز</label><input id="setFacility" />
+        <label>اسم المدينة</label><input id="setCity" />
+        <label>اسم المشرف</label><input id="setManager" />
+        <label>الهاتف</label><input id="setPhone" type="tel" />
+        <label>أجل المزاد (أيام)</label><input id="setThreshold" type="number" min="1" max="365" />
+        <label>مدة القفل التلقائي (دقائق)</label><input id="setLock" type="number" min="1" max="60" />
+        <label>رسوم التخزين اليومية (درهم)</label><input id="setRate" type="number" min="0" />
+        <div class="toolbar" style="margin-top:12px;">
+          <button class="btn" onclick="saveSettings()">💾 حفظ</button>
+        </div>
+      </div>
+      <div class="card">
+        <h3>🔐 الأمان</h3>
+        <p style="font-size:13px;color:var(--muted);margin:0 0 8px;">رمز الدخول: <b id="pinMasked">••••</b></p>
+        <button class="btn secondary" onclick="changePin()">تغيير رمز الدخول</button>
+      </div>
+      <div class="card">
+        <h3>📊 البيانات</h3>
+        <div class="toolbar">
+          <button class="btn secondary" onclick="exportBackup()">⬇ تصدير نسخة</button>
+          <button class="btn danger" onclick="clearAll()">🗑 حذف الكل</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <nav class="bottom">
+    <button data-page="home" class="active" onclick="showPage('home')">
+      <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 3l9 8h-3v9h-4v-6H10v6H6v-9H3z"/></svg>
+      الرئيسية
+    </button>
+    <button data-page="records" onclick="showPage('records')">
+      <svg viewBox="0 0 24 24" fill="currentColor"><path d="M4 5h16v2H4zm0 6h16v2H4zm0 6h16v2H4z"/></svg>
+      السجلات
+    </button>
+    <button data-page="settings" onclick="showPage('settings')">
+      <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 8a4 4 0 100 8 4 4 0 000-8zm9 4a9 9 0 01-.2 1.8l2 1.6-2 3.4-2.4-1a9 9 0 01-3 1.8L15 22h-6l-.4-2.4a9 9 0 01-3-1.8l-2.4 1-2-3.4 2-1.6A9 9 0 013 12a9 9 0 01.2-1.8l-2-1.6 2-3.4 2.4 1a9 9 0 013-1.8L9 2h6l.4 2.4a9 9 0 013 1.8l2.4-1 2 3.4-2 1.6A9 9 0 0121 12z"/></svg>
+      الإعدادات
+    </button>
+  </nav>
+</div>
+
+<div class="toast" id="toast"></div>
+<div id="modalRoot"></div>
+
+<script>
+const STORAGE_KEY = 'mahjaz_v3_db';
+const DEFAULT_PIN = '1993';
+let DB = null;
+let session = { unlocked: false, lastActive: Date.now() };
+
+function defaultDB() {
+  return {
+    version: 3, schemaVersion: '3.0.0', timezone: 'Africa/Casablanca',
+    exportDate: new Date().toISOString(),
+    settings: {
+      municipalityName: 'الجماعة الحضرية للمدينة',
+      impoundFacilityName: 'المحجز الجماعي البلدي للدراجات والمركبات',
+      city: 'المحجز البلدي',
+      managerName: 'المشرف على المستودع',
+      contactPhone: '0500000000',
+      auctionThresholdDays: 30,
+      autoLockMinutes: 5,
+      accessPin: DEFAULT_PIN,
+      storageDailyRateMAD: 10,
+      currency: 'MAD'
+    },
+    records: [], auditLog: []
+  };
+}
+function loadDB() {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (raw) return JSON.parse(raw);
+  } catch (e) { console.error(e); }
+  return defaultDB();
+}
+function saveDB() {
+  DB.exportDate = new Date().toISOString();
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(DB));
+}
+function isoNow() { return new Date().toISOString(); }
+function fmtDate(s) {
+  if (!s) return '—';
+  const d = new Date(s);
+  if (isNaN(d)) return s;
+  return d.toLocaleDateString('ar-MA', { year:'numeric', month:'2-digit', day:'2-digit' }) + ' ' +
+         d.toLocaleTimeString('ar-MA', { hour:'2-digit', minute:'2-digit' });
+}
+function daysBetween(a, b) { return Math.max(0, Math.ceil((new Date(b) - new Date(a)) / 86400000)); }
+function esc(s) {
+  return String(s == null ? '' : s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+function toast(msg, dur = 2200) {
+  const t = document.getElementById('toast');
+  t.textContent = msg; t.classList.add('show');
+  clearTimeout(t._timer);
+  t._timer = setTimeout(() => t.classList.remove('show'), dur);
+}
+function genId(p = 'rec') { return p + '-' + Date.now().toString(36) + Math.random().toString(36).slice(2,6); }
+function statusLabel(s) {
+  return {impounded:'محجوزة',auction_pending:'بانتظار المزاد',auctioned:'بيعت بالمزاد',released:'مسلَّمة',destroyed:'متلفة'}[s] || s;
+}
+function reasonLabel(r) {
+  return {no_helmet:'بدون خوذة',no_insurance:'بدون تأمين',no_registration:'بدون وثائق',dangerous_driving:'سياقة خطيرة',illegal_parking:'وقوف معرقل',stolen:'مسروقة',abandoned:'مهجورة',other:'أخرى'}[r] || r;
+}
+function logAudit(action, target) {
+  DB.auditLog.push({timestamp: Date.now(), actor:'manager', action, target, ip:'local'});
+  if (DB.auditLog.length > 500) DB.auditLog = DB.auditLog.slice(-500);
+  saveDB();
+}
+
+function showLock() {
+  document.getElementById('lockScreen').classList.remove('hidden');
+  document.getElementById('app').classList.add('hidden');
+  session.unlocked = false;
+  let buf = '';
+  const dots = document.querySelectorAll('#pinDisplay .pin-dot');
+  const err = document.getElementById('lockErr');
+  err.textContent = '';
+  function refresh() { dots.forEach((d, i) => d.classList.toggle('filled', i < buf.length)); }
+  function attempt() {
+    if (buf === (DB.settings.accessPin || DEFAULT_PIN)) {
+      session.unlocked = true; session.lastActive = Date.now();
+      document.getElementById('lockScreen').classList.add('hidden');
+      document.getElementById('app').classList.remove('hidden');
+      logAudit('login', 'app');
+      renderAll(); startAutoLock();
+    } else {
+      err.textContent = 'رمز خاطئ، حاول مجدداً';
+      buf = ''; refresh();
+    }
+  }
+  document.getElementById('pinPad').onclick = (e) => {
+    const btn = e.target.closest('button'); if (!btn) return;
+    const k = btn.dataset.k; err.textContent = '';
+    if (k === 'C') { buf = buf.slice(0, -1); refresh(); return; }
+    if (k === 'OK') { attempt(); return; }
+    if (buf.length < 4) { buf += k; refresh(); }
+    if (buf.length === 4) setTimeout(attempt, 150);
+  };
+}
+
+let autoLockTimer = null;
+function startAutoLock() {
+  clearInterval(autoLockTimer);
+  const mins = Math.max(1, Number(DB.settings.autoLockMinutes) || 5);
+  autoLockTimer = setInterval(() => {
+    if (!session.unlocked) return;
+    if (Date.now() - session.lastActive > mins * 60000) { showLock(); toast('تم القفل تلقائياً'); }
+  }, 15000);
+}
+document.addEventListener('touchstart', () => { session.lastActive = Date.now(); }, { passive: true });
+document.addEventListener('click', () => { session.lastActive = Date.now(); }, { passive: true });
+
+function showPage(page) {
+  ['home','records','settings'].forEach(p => {
+    document.getElementById('page-' + p).classList.toggle('hidden', p !== page);
+  });
+  document.querySelectorAll('nav.bottom button').forEach(b => {
+    b.classList.toggle('active', b.dataset.page === page);
+  });
+  if (page === 'records') renderRecords();
+  if (page === 'settings') renderSettings();
+  if (page === 'home') renderHome();
+  window.scrollTo(0, 0);
+}
+
+function renderAll() { renderHome(); renderRecords(); renderSettings(); }
+
+function renderHome() {
+  const recs = DB.records;
+  document.getElementById('stImpounded').textContent = recs.filter(r => r.status === 'impounded').length;
+  document.getElementById('stAuction').textContent = recs.filter(r => r.status === 'auction_pending').length;
+  document.getElementById('stReleased').textContent = recs.filter(r => r.status === 'released').length;
+  document.getElementById('stTotal').textContent = recs.length;
+  const recent = [...recs].sort((a, b) => b.createdAt - a.createdAt).slice(0, 4);
+  const el = document.getElementById('recentList');
+  if (recent.length === 0) { el.innerHTML = '<div class="empty"><p>لا توجد سجلات بعد</p></div>'; }
+  else {
+    el.innerHTML = recent.map(r => recordCardHTML(r)).join('');
+    el.querySelectorAll('[data-id]').forEach(c => { c.onclick = () => openRecordDetail(c.dataset.id); });
+  }
+}
+
+function recordCardHTML(r) {
+  const days = daysBetween(r.entryDate, r.releaseDate || new Date().toISOString());
+  return `
+    <div class="card record-card" data-id="${esc(r.id)}" style="cursor:pointer;">
+      <div class="record-head">
+        <span class="record-title">${esc(r.pvNumber)}</span>
+        <span class="badge ${esc(r.status)}">${esc(statusLabel(r.status))}</span>
+      </div>
+      <div class="record-sub">${esc(r.brand || '')} ${esc(r.model || '')} — ${esc(r.plateNumber || 'بدون صفيحة')}</div>
+      <div class="divider"></div>
+      <div class="row"><span class="k">السائق</span><span class="v" style="direction:rtl;text-align:left;">${esc(r.driver?.name || '—')}</span></div>
+      <div class="row"><span class="k">تاريخ الإيداع</span><span class="v">${esc(fmtDate(r.entryDate))}</span></div>
+      <div class="row"><span class="k">مدة الحجز</span><span class="v">${days} يوم</span></div>
+    </div>
+  `;
+}
+
+function renderRecords() {
+  const q = (document.getElementById('searchInput')?.value || '').trim().toLowerCase();
+  let list = [...DB.records].sort((a, b) => b.createdAt - a.createdAt);
+  if (q) {
+    list = list.filter(r =>
+      (r.pvNumber || '').toLowerCase().includes(q) ||
+      (r.plateNumber || '').toLowerCase().includes(q) ||
+      (r.driver?.name || '').toLowerCase().includes(q) ||
+      (r.owner?.name || '').toLowerCase().includes(q) ||
+      (r.chassisNumber || '').toLowerCase().includes(q)
+    );
+  }
+  const el = document.getElementById('recordsList');
+  if (list.length === 0) { el.innerHTML = '<div class="empty"><p>لا توجد سجلات مطابقة</p></div>'; return; }
+  el.innerHTML = list.map(r => recordCardHTML(r)).join('');
+  el.querySelectorAll('[data-id]').forEach(c => { c.onclick = () => openRecordDetail(c.dataset.id); });
+}
+
+function renderSettings() {
+  const s = DB.settings;
+  document.getElementById('setMunicipality').value = s.municipalityName || '';
+  document.getElementById('setFacility').value = s.impoundFacilityName || '';
+  document.getElementById('setCity').value = s.city || '';
+  document.getElementById('setManager').value = s.managerName || '';
+  document.getElementById('setPhone').value = s.contactPhone || '';
+  document.getElementById('setThreshold').value = s.auctionThresholdDays || 30;
+  document.getElementById('setLock').value = s.autoLockMinutes || 5;
+  document.getElementById('setRate').value = s.storageDailyRateMAD || 10;
+  document.getElementById('pinMasked').textContent = '••••';
+}
+
+function saveSettings() {
+  const s = DB.settings;
+  s.municipalityName = document.getElementById('setMunicipality').value.trim();
+  s.impoundFacilityName = document.getElementById('setFacility').value.trim();
+  s.city = document.getElementById('setCity').value.trim();
+  s.managerName = document.getElementById('setManager').value.trim();
+  s.contactPhone = document.getElementById('setPhone').value.replace(/\D/g, '');
+  s.auctionThresholdDays = Math.max(1, parseInt(document.getElementById('setThreshold').value) || 30);
+  s.autoLockMinutes = Math.max(1, Math.min(60, parseInt(document.getElementById('setLock').value) || 5));
+  s.storageDailyRateMAD = Math.max(0, parseFloat(document.getElementById('setRate').value) || 10);
+  saveDB(); logAudit('edit', 'settings');
+  toast('✅ تم حفظ الإعدادات'); startAutoLock();
+}
+
+function openRecordDetail(id) {
+  const r = DB.records.find(x => x.id === id); if (!r) return;
+  const days = daysBetween(r.entryDate, r.releaseDate || new Date().toISOString());
+  const fees = days * (DB.settings.storageDailyRateMAD || 10);
+  const html = `
+    <div class="modal-bg" onclick="if(event.target===this)closeModal()">
+      <div class="modal">
+        <h2>${esc(r.pvNumber)}</h2>
+        <div class="row"><span class="k">الحالة</span><span class="v"><span class="badge ${esc(r.status)}">${esc(statusLabel(r.status))}</span></span></div>
+        <div class="divider"></div>
+        <h3 style="font-size:14px;color:var(--green);margin:0 0 6px;">المركبة</h3>
+        <div class="row"><span class="k">النوع</span><span class="v">${esc(r.vehicleType || '—')}</span></div>
+        <div class="row"><span class="k">الصفيحة</span><span class="v">${esc(r.plateNumber || 'بدون صفيحة')}</span></div>
+        <div class="row"><span class="k">الهيكل</span><span class="v">${esc(r.chassisNumber || '—')}</span></div>
+        <div class="row"><span class="k">العلامة/الطراز</span><span class="v">${esc(r.brand || '')} ${esc(r.model || '')}</span></div>
+        <div class="row"><span class="k">سعة المحرك</span><span class="v">${esc(r.cylinderCapacity?.label || '—')}</span></div>
+        <div class="row"><span class="k">اللون</span><span class="v">${esc(r.color || '—')}</span></div>
+        <div class="divider"></div>
+        <h3 style="font-size:14px;color:var(--green);margin:0 0 6px;">السائق / المالك</h3>
+        <div class="row"><span class="k">السائق</span><span class="v" style="direction:rtl;text-align:left;">${esc(r.driver?.name || '—')}</span></div>
+        <div class="row"><span class="k">ب.ت.و</span><span class="v">${esc(r.driver?.cin || '—')}</span></div>
+        <div class="row"><span class="k">الهاتف</span><span class="v">${esc(r.driver?.phone || '—')}</span></div>
+        <div class="row"><span class="k">المالك</span><span class="v" style="direction:rtl;text-align:left;">${esc(r.owner?.name || '—')}</span></div>
+        <div class="divider"></div>
+        <h3 style="font-size:14px;color:var(--green);margin:0 0 6px;">الحجز</h3>
+        <div class="row"><span class="k">السبب</span><span class="v" style="direction:rtl;text-align:left;">${esc(reasonLabel(r.reason))}</span></div>
+        <div class="row"><span class="k">جهة الضبط</span><span class="v" style="direction:rtl;text-align:left;">${esc(r.seizingAuthority || '—')}</span></div>
+        <div class="row"><span class="k">رقم الشرطي</span><span class="v" style="direction:rtl;text-align:left;">${esc(r.officerBadge || '—')}</span></div>
+        <div class="row"><span class="k">المكان</span><span class="v" style="direction:rtl;text-align:left;">${esc(r.seizureLocation || '—')}</span></div>
+        <div class="row"><span class="k">منطقة التخزين</span><span class="v" style="direction:rtl;text-align:left;">${esc(r.impoundLocationZone || '—')}</span></div>
+        <div class="row"><span class="k">الإيداع</span><span class="v">${esc(fmtDate(r.entryDate))}</span></div>
+        <div class="row"><span class="k">مدة الحجز</span><span class="v">${days} يوم</span></div>
+        <div class="row"><span class="k">الرسوم المتراكمة</span><span class="v">${fees} درهم</span></div>
+        ${r.releaseDate ? `<div class="row"><span class="k">التسليم</span><span class="v">${esc(fmtDate(r.releaseDate))}</span></div>` : ''}
+        ${r.auction ? `
+          <div class="divider"></div>
+          <h3 style="font-size:14px;color:var(--danger);margin:0 0 6px;">⚖ المزاد</h3>
+          <div class="row"><span class="k">إعلان</span><span class="v">${esc(r.auction.noticeNumber)}</span></div>
+          <div class="row"><span class="k">التاريخ</span><span class="v">${esc(fmtDate(r.auction.auctionDate))}</span></div>
+          <div class="row"><span class="k">الثمن الافتتاحي</span><span class="v">${esc(r.auction.startingPrice)} درهم</span></div>
+        ` : ''}
+        ${r.notes ? `<div class="divider"></div><p style="font-size:13px;color:var(--muted);margin:0;">${esc(r.notes)}</p>` : ''}
+        <div class="divider"></div>
+        <h3 style="font-size:14px;color:var(--green);margin:0 0 6px;">📜 السجل الزمني</h3>
+        ${(r.history || []).map(h => `
+          <div class="history-item">
+            <div class="time">${esc(fmtDate(new Date(h.timestamp).toISOString()))}</div>
+            <div>${esc(h.description)}</div>
+          </div>
+        `).join('')}
+        <div class="toolbar" style="margin-top:14px;">
+          ${r.status === 'impounded' ? `<button class="btn" onclick="releaseRecord('${esc(r.id)}')">✅ تسليم</button>` : ''}
+          ${r.status === 'impounded' ? `<button class="btn secondary" onclick="sendToAuction('${esc(r.id)}')">⚖ مزاد</button>` : ''}
+          ${r.status === 'auction_pending' ? `<button class="btn" onclick="markAuctioned('${esc(r.id)}')">💰 بيع</button>` : ''}
+          <button class="btn secondary" onclick="closeModal()">إغلاق</button>
+        </div>
+      </div>
+    </div>
+  `;
+  document.getElementById('modalRoot').innerHTML = html;
+}
+function closeModal() { document.getElementById('modalRoot').innerHTML = ''; }
+
+function openAddForm() {
+  const today = new Date().toISOString().slice(0, 16);
+  const html = `
+    <div class="modal-bg" onclick="if(event.target===this)closeModal()">
+      <div class="modal">
+        <h2>➕ إضافة حجز جديد</h2>
+        <label>رقم المحضر (PV)</label><input id="f_pv" placeholder="PV-2026/0146" />
+        <label>تاريخ الإيداع</label><input id="f_entry" type="datetime-local" value="${today}" />
+        <div class="grid-2">
+          <div><label>نوع المركبة</label>
+            <select id="f_type">
+              <option value="motorcycle">دراجة نارية</option>
+              <option value="scooter">سكوتر</option>
+              <option value="car">سيارة</option>
+              <option value="tricycle">ثلاثية</option>
+              <option value="other">أخرى</option>
+            </select>
+          </div>
+          <div><label>الصفيحة</label><input id="f_plate" placeholder="42-أ-15890 أو اتركه فارغاً" /></div>
+        </div>
+        <div class="grid-2">
+          <div><label>العلامة</label><input id="f_brand" /></div>
+          <div><label>الطراز</label><input id="f_model" /></div>
+        </div>
+        <div class="grid-2">
+          <div><label>سعة المحرك (cc)</label><input id="f_cc" type="number" placeholder="49" /></div>
+          <div><label>اللون</label><input id="f_color" /></div>
+        </div>
+        <label>رقم الهيكل</label><input id="f_chassis" />
+        <div class="grid-2">
+          <div><label>الحالة</label>
+            <select id="f_condition">
+              <option value="excellent">ممتازة</option>
+              <option value="good" selected>جيدة</option>
+              <option value="fair">متوسطة</option>
+              <option value="poor">ضعيفة</option>
+              <option value="damaged">متضررة</option>
+            </select>
+          </div>
+          <div><label>منطقة التخزين</label><input id="f_zone" placeholder="جناح A - الصف 3" /></div>
+        </div>
+        <label>سبب الحجز</label>
+        <select id="f_reason">
+          <option value="no_helmet">بدون خوذة</option>
+          <option value="no_insurance">بدون تأمين</option>
+          <option value="no_registration">بدون وثائق</option>
+          <option value="dangerous_driving">سياقة خطيرة</option>
+          <option value="illegal_parking">وقوف معرقل</option>
+          <option value="stolen">مسروقة</option>
+          <option value="abandoned">مهجورة</option>
+          <option value="other">أخرى</option>
+        </select>
+        <div class="grid-2">
+          <div><label>جهة الضبط</label><input id="f_auth" placeholder="شرطة المرور" /></div>
+          <div><label>رقم الشرطي</label><input id="f_badge" /></div>
+        </div>
+        <label>مكان الضبط</label><input id="f_loc" />
+        <label>اسم السائق</label><input id="f_dname" />
+        <div class="grid-2">
+          <div><label>ب.ت.و السائق</label><input id="f_dcin" /></div>
+          <div><label>هاتف السائق</label><input id="f_dphone" type="tel" /></div>
+        </div>
+        <label style="display:flex;align-items:center;gap:8px;margin-top:10px;">
+          <input type="checkbox" id="f_sameOwner" checked style="width:auto;" onchange="toggleOwnerFields()">
+          المالك هو نفسه السائق
+        </label>
+        <div id="ownerFields" class="hidden">
+          <label>اسم المالك</label><input id="f_oname" />
+          <div class="grid-2">
+            <div><label>ب.ت.و المالك</label><input id="f_ocin" /></div>
+            <div><label>هاتف المالك</label><input id="f_ophone" type="tel" /></div>
+          </div>
+          <label>عنوان المالك</label><input id="f_oaddr" />
+        </div>
+        <label>ملاحظات</label><textarea id="f_notes" rows="2"></textarea>
+        <div class="toolbar" style="margin-top:14px;">
+          <button class="btn" onclick="saveRecord()">💾 حفظ</button>
+          <button class="btn secondary" onclick="closeModal()">إلغاء</button>
+        </div>
+      </div>
+    </div>
+  `;
+  document.getElementById('modalRoot').innerHTML = html;
+}
+function toggleOwnerFields() {
+  const same = document.getElementById('f_sameOwner').checked;
+  document.getElementById('ownerFields').classList.toggle('hidden', same);
+}
+function saveRecord() {
+  const pv = document.getElementById('f_pv').value.trim();
+  if (!pv) { toast('⚠ رقم المحضر مطلوب'); return; }
+  const plateRaw = document.getElementById('f_plate').value.trim();
+  const hasPlate = plateRaw.length > 0;
+  const ccVal = parseFloat(document.getElementById('f_cc').value);
+  const same = document.getElementById('f_sameOwner').checked;
+  const dname = document.getElementById('f_dname').value.trim();
+  const dcin = document.getElementById('f_dcin').value.trim();
+  const dphone = document.getElementById('f_dphone').value.trim();
+  const entry = document.getElementById('f_entry').value;
+  const now = Date.now();
+  const rec = {
+    id: genId('rec'), pvNumber: pv, entryDate: new Date(entry).toISOString(),
+    vehicleType: document.getElementById('f_type').value,
+    hasPlate, plateNumber: hasPlate ? plateRaw : null, plateType: hasPlate ? 'standard' : 'none',
+    chassisNumber: document.getElementById('f_chassis').value.trim(),
+    brand: document.getElementById('f_brand').value.trim(),
+    model: document.getElementById('f_model').value.trim(),
+    cylinderCapacity: isNaN(ccVal) ? {value:null,unit:'cc',label:'unknown'} : {value:ccVal,unit:'cc',label:ccVal+'cc'},
+    color: document.getElementById('f_color').value.trim(),
+    condition: document.getElementById('f_condition').value,
+    impoundLocationZone: document.getElementById('f_zone').value.trim(),
+    reason: document.getElementById('f_reason').value,
+    seizingAuthority: document.getElementById('f_auth').value.trim(),
+    officerBadge: document.getElementById('f_badge').value.trim(),
+    seizureLocation: document.getElementById('f_loc').value.trim(),
+    driver: {name:dname,cin:dcin,phone:dphone,hasLicense:false},
+    owner: same ? {name:dname,cin:dcin,phone:dphone} : {
+      name: document.getElementById('f_oname').value.trim(),
+      cin: document.getElementById('f_ocin').value.trim(),
+      phone: document.getElementById('f_ophone').value.trim(),
+      address: document.getElementById('f_oaddr').value.trim()
+    },
+    isOwnerSameAsDriver: same, status: 'impounded',
+    storageFees: {dailyRate: DB.settings.storageDailyRateMAD || 10, currency:'MAD', accrued:0, lastComputedAt: isoNow()},
+    photos: [], documents: [], notifications: [],
+    notes: document.getElementById('f_notes').value.trim(),
+    history: [{id: genId('log'), timestamp: now, action:'created', description:'إيداع المركبة بالمحجز البلدي وإعداد محضر الضبط.', actor:'manager'}],
+    createdAt: now, updatedAt: now
+  };
+  DB.records.push(rec); saveDB(); logAudit('edit', rec.id);
+  closeModal(); renderAll(); toast('✅ تم حفظ الحجز');
+}
+
+function releaseRecord(id) {
+  const r = DB.records.find(x => x.id === id); if (!r) return;
+  const receiver = prompt('اسم المستلم:'); if (!receiver) return;
+  const cin = prompt('ب.ت.و المستلم:') || '';
+  const auth = prompt('رقم إذن التسليم (مثال 2026/092):') || '';
+  const now = Date.now();
+  r.status = 'released'; r.releaseDate = new Date(now).toISOString();
+  r.releaseReceiverName = receiver; r.releaseReceiverCin = cin; r.releaseAuthorizationNumber = auth;
+  r.updatedAt = now;
+  r.history.push({id: genId('log'), timestamp: now, action:'released', description:`تسليم المركبة للسيد ${receiver} بموجب إذن ${auth}.`, actor:'manager'});
+  saveDB(); logAudit('edit', r.id); closeModal(); renderAll(); toast('✅ تم التسليم');
+}
+function sendToAuction(id) {
+  const r = DB.records.find(x => x.id === id); if (!r) return;
+  const days = daysBetween(r.entryDate, new Date().toISOString());
+  if (days < (DB.settings.auctionThresholdDays || 30)) {
+    toast(`⚠ لم تنقضِ مدة ${DB.settings.auctionThresholdDays} يوماً (${days} يوم)`); return;
+  }
+  if (!confirm('إدراج المركبة في المزاد العلني؟')) return;
+  const now = Date.now();
+  r.status = 'auction_pending';
+  r.auction = {
+    noticeNumber: 'AV-' + new Date().getFullYear() + '/' + String(Math.floor(Math.random()*9000)+1000),
+    auctionDate: new Date(now + 14*86400000).toISOString(),
+    startingPrice: 3000, currency: 'MAD', status: 'scheduled'
+  };
+  r.updatedAt = now;
+  r.history.push({id: genId('log'), timestamp: now, action:'updated', description:`إدراج المركبة في المزاد العلني بعد ${days} يوماً.`, actor:'manager'});
+  saveDB(); logAudit('edit', r.id); closeModal(); renderAll(); toast('⚖ تم الإدراج في المزاد');
+}
+function markAuctioned(id) {
+  const r = DB.records.find(x => x.id === id); if (!r) return;
+  const price = parseFloat(prompt('ثمن البيع (درهم):') || '0');
+  const winner = prompt('اسم المشتري:') || '';
+  const now = Date.now();
+  r.status = 'auctioned'; r.auction.status = 'sold'; r.auction.winningBid = price; r.auction.winnerName = winner;
+  r.updatedAt = now;
+  r.history.push({id: genId('log'), timestamp: now, action:'auctioned', description:`بيع المركبة بالمزاد بمبلغ ${price} درهم للمشتري ${winner}.`, actor:'manager'});
+  saveDB(); logAudit('edit', r.id); closeModal(); renderAll(); toast('💰 تم تسجيل البيع');
+}
+function runAuctionCheck() {
+  const threshold = DB.settings.auctionThresholdDays || 30;
+  const candidates = DB.records.filter(r => r.status === 'impounded' && daysBetween(r.entryDate, new Date().toISOString()) >= threshold);
+  if (candidates.length === 0) { toast('✅ لا توجد مركبات مؤهلة للمزاد'); return; }
+  if (!confirm(`يوجد ${candidates.length} مركبة مؤهلة. إدراجها كلها في المزاد؟`)) return;
+  const now = Date.now();
+  candidates.forEach(r => {
+    r.status = 'auction_pending';
+    r.auction = {
+      noticeNumber: 'AV-' + new Date().getFullYear() + '/' + String(Math.floor(Math.random()*9000)+1000),
+      auctionDate: new Date(now + 14*86400000).toISOString(),
+      startingPrice: 3000, currency:'MAD', status:'scheduled'
+    };
+    r.updatedAt = now;
+    r.history.push({id: genId('log'), timestamp: now, action:'updated', description:'إدراج تلقائي في المزاد بعد انقضاء الأجل.', actor:'system'});
+  });
+  saveDB(); renderAll(); toast(`⚖ تم إدراج ${candidates.length} مركبة`);
+}
+
+function exportBackup() {
+  const data = JSON.parse(JSON.stringify(DB));
+  const json = JSON.stringify(data, null, 2);
+  const blob = new Blob([json], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'mahjaz-backup-' + new Date().toISOString().slice(0,10) + '.json';
+  document.body.appendChild(a); a.click(); document.body.removeChild(a);
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+  logAudit('export', 'backup'); toast('⬇ تم تصدير النسخة');
+}
+function importBackup(event) {
+  const file = event.target.files[0]; if (!file) return;
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    try {
+      const data = JSON.parse(e.target.result);
+      if (!data.records || !Array.isArray(data.records)) throw new Error('بنية غير صالحة');
+      if (!confirm(`استيراد ${data.records.length} سجل؟ سيستبدل البيانات الحالية.`)) return;
+      DB = data;
+      if (!DB.settings) DB.settings = defaultDB().settings;
+      if (!DB.auditLog) DB.auditLog = [];
+      saveDB(); logAudit('edit', 'import'); renderAll(); toast('⬆ تم الاستيراد بنجاح');
+    } catch (err) { toast('❌ ملف غير صالح: ' + err.message); }
+  };
+  reader.readAsText(file);
+  event.target.value = '';
+}
+function clearAll() {
+  if (!confirm('⚠ حذف كل السجلات نهائياً؟')) return;
+  if (!confirm('تأكيد أخير: لا يمكن التراجع!')) return;
+  DB.records = []; saveDB(); logAudit('delete', 'all'); renderAll(); toast('🗑 تم الحذف');
+}
+function changePin() {
+  const old = prompt('الرمز الحالي:');
+  if (old !== DB.settings.accessPin) { toast('❌ رمز خاطئ'); return; }
+  const np = prompt('الرمز الجديد (4 أرقام):');
+  if (!np || !/^\d{4}$/.test(np)) { toast('⚠ يجب أن يكون 4 أرقام'); return; }
+  DB.settings.accessPin = np; saveDB(); logAudit('edit', 'pin'); toast('🔐 تم تغيير الرمز');
+}
+
+function init() {
+  DB = loadDB();
+  document.getElementById('appTitle').textContent = DB.settings.impoundFacilityName || 'المحجز البلدي';
+  document.getElementById('appSub').textContent = DB.settings.municipalityName || '';
+  showLock();
+}
+init();
+</script>
+</body>
+</html>
